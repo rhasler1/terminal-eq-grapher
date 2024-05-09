@@ -59,6 +59,7 @@ impl App {
     }
     // function to compute graph_vector
 
+    // seperate logic in eval_expr to multiple methods
     pub fn eval_expr(&mut self) -> Result<Vec<(f64,f64)>, MevalError> {
 
         // handling expr parsing errors :: begin
@@ -73,10 +74,12 @@ impl App {
         // handling expr parsing errors :: end
 
         // UNSAFE CODE BELOW: I should explicitly handle potential errors, currently the program will panic! :: begin
+        // Note-- I am having a hard time making the program panic!
+        // look into unwrap_or_else
         // set x_min and x_max :: begin
         let mut iter = self.x_domain_input.split(".."); // iter must be mut b/c of next() func.
-        let start: i64 = iter.next().unwrap().parse().unwrap(); // Range value must be a integer type
-        let end: i64 = iter.next().unwrap().parse().unwrap(); // Range value must be a interger type
+        let start: i64 = iter.next().unwrap_or_default().parse().unwrap_or_default(); // Range value must be a integer type
+        let end: i64 = iter.next().unwrap_or_default().parse().unwrap_or_default(); // Range value must be a interger type
 
         // We should not be losing precision here, the user is required to enter signed integers for the x min and max values
         self.x_min = start as f64; // storing in app state as f64
@@ -98,13 +101,13 @@ impl App {
         // computing min y value
         let min_y = iter
             .map(|(_, y)| y)
-            .min_by(|a, b| a.partial_cmp(b).unwrap());
+            .min_by(|a, b| a.partial_cmp(b).unwrap()); // look into unwrap_or_else
         // ghosting iter
         let iter = self.graph_vector.iter();
         // computing max y value
         let max_y = iter
             .map(|(_, y)| y)
-            .max_by(|a, b| a.partial_cmp(b).unwrap());
+            .max_by(|a, b| a.partial_cmp(b).unwrap()); // look into unwrap_or_else
         // get y_min and y_max :: end
 
         // unwrap min_y

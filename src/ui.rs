@@ -4,7 +4,6 @@ use ratatui::prelude::Layout;
 
 use ratatui::{
     prelude::*,
-    symbols::border,
     widgets::{block::*, *},
 };
 
@@ -24,7 +23,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         .style(Style::default());
 
     let title = Paragraph::new(Text::styled(
-        "Create new Graph",
+        "Equation Grapher",
         Style::default().fg(Color::Green),
     ))
     .block(title_block);
@@ -36,16 +35,16 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         // The first half of the text
         match app.current_screen {
             CurrentScreen::Main => {
-                Span::styled("Normal Mode", Style::default().fg(Color::LightGreen))
+                Span::styled("Input Mode", Style::default().fg(Color::LightGreen))
             }
             CurrentScreen::Success => {
-                Span::styled("Display Mode", Style::default().fg(Color::Green))
+                Span::styled("Display Mode", Style::default().fg(Color::LightCyan))
             }
             CurrentScreen::Failure => {
-                Span::styled("Failure Mode", Style::default().fg(Color::Yellow))
+                Span::styled("Failure Mode", Style::default().fg(Color::Red))
             }
             CurrentScreen::Exiting => {
-                Span::styled("Exiting", Style::default().fg(Color::LightRed))
+                Span::styled("Exiting", Style::default().fg(Color::Yellow))
             }
         }
         .to_owned(),
@@ -61,7 +60,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
                     ),
                     CurrentlyInputting::Xdomain => Span::styled(
                         "Inputting X-Domain",
-                        Style::default().fg(Color::LightGreen),
+                        Style::default().fg(Color::Green),
                     ),
                 }
             } else {
@@ -85,15 +84,15 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Success => Span::styled(
-                "(q) to quit",
+                "<q> to quit app | <r> to reset app",
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Failure => Span::styled(
-                "(q) to quit",
+                "<q> to quit app | <r> to reset app",
                 Style::default().fg(Color::Red),
             ),
             CurrentScreen::Exiting => Span::styled(
-                "(q) to quit",
+                "<y> to confirm | <n> to confirm", // redundant
                 Style::default().fg(Color::Red),
             ),
         }
@@ -114,12 +113,11 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
     f.render_widget(key_notes_footer, footer_chunks[1]);
 
     if let CurrentScreen::Success = app.current_screen {
-        f.render_widget(Clear, f.size());
         let dataset = vec![
             Dataset::default()
                 .name("Graph")
                 .marker(Marker::Dot)
-                .graph_type(GraphType::Scatter)
+                .graph_type(GraphType::Line)
                 .style(Style::default().cyan())
                 .data(&app.graph_vector)
         ];
@@ -127,7 +125,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         let x_min_clone = app.x_min.clone();
         let x_max_clone = app.x_max.clone();
         let x_axis = Axis::default()
-            .title("X Axis".red())
+            .title("X Axis".blue())
             .style(Style::default().white())
             .bounds([x_min_clone, x_max_clone])
             .labels(vec![x_min_clone.to_string().into(), x_max_clone.to_string().into()]);
@@ -135,7 +133,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         let y_min_clone = app.y_min.clone();
         let y_max_clone = app.y_max.clone();
         let y_axis = Axis::default()
-            .title("Y Axis".red())
+            .title("Y Axis".blue())
             .style(Style::default().white())
             .bounds([y_min_clone, y_max_clone])
             .labels(vec![y_min_clone.to_string().into(), y_max_clone.to_string().into()]);
@@ -145,7 +143,24 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
             .x_axis(x_axis)
             .y_axis(y_axis);
         let area = centered_rect(50, 50, f.size());
-        f.render_widget(chart, area)
+        f.render_widget(chart, area);
+    }
+
+    if let CurrentScreen::Failure =  app.current_screen {
+        //f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
+        let popup_block = Block::default()
+            .title("Parsing Failure!")
+            .borders(Borders::NONE)
+            .style(Style::default().bg(Color::DarkGray));
+        let failure_text = Text::styled(
+            "Failure occurred when attempting to parse the provided expression or x domain.",
+            Style::default().fg(Color::Red)
+        );
+        let failure_paragraph = Paragraph::new(failure_text)
+            .block(popup_block)
+            .wrap( Wrap { trim: false } );
+        let area = centered_rect(60, 25, f.size());
+        f.render_widget(failure_paragraph, area);
     }
 
     if let CurrentScreen::Exiting = app.current_screen {
@@ -162,7 +177,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         // the `trim: false` will stop the text from being cut off when over the edge of the block
         let exit_paragraph = Paragraph::new(exit_text)
             .block(popup_block)
-            .wrap(Wrap { trim: false });
+            .wrap( Wrap { trim: false } );
 
         let area = centered_rect(60, 25, f.size());
         f.render_widget(exit_paragraph, area);

@@ -1,18 +1,16 @@
 use crossterm::event::{self, EnableMouseCapture, Event, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{enable_raw_mode, EnterAlternateScreen};
-
-
-use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
-use std::io;
-
 use crossterm::event::DisableMouseCapture;
 use crossterm::terminal::{disable_raw_mode, LeaveAlternateScreen};
-
 use crossterm::event::KeyCode;
-use std::error::Error;
+
+use ratatui::backend::CrosstermBackend;
 use ratatui::prelude::Backend;
+use ratatui::Terminal;
+
+use std::io;
+use std::error::Error;
 
 use terminal_queue::app::{App, CurrentScreen, CurrentlyInputting};
 use terminal_queue::ui::ui;
@@ -83,12 +81,15 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                                         // if Xdomain has been input then...
                                         // compute graph vector
                                         let result = app.eval_expr();
+                                        // TODO: research into handling errors in a better way
                                         match result {
-                                            Ok(vec) => vec,
-                                            Err(err) => return Ok(false), // on error exit program.
+                                            Ok(_vec) => {
+                                                app.current_screen = CurrentScreen::Success; // on successful method call app.eval_expr()
+                                            }, 
+                                            Err(_err) => {
+                                                app.current_screen = CurrentScreen::Failure; // on failed method call app.eval_expr()
+                                            },
                                         };
-                                        // on success switch CurrentScreen to display graph of graph vector
-                                        app.current_screen = CurrentScreen::Success;
                                     }
                                 }
                             }
@@ -112,6 +113,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                         KeyCode::Tab => {
                             app.toggle_input();
                         }
+                        KeyCode::Char('q') => {
+                            app.current_screen = CurrentScreen::Exiting;
+                        }
                         KeyCode::Char(value) => {
                             if let Some(inputting) = &app.currently_inputting {
                                 match inputting {
@@ -130,22 +134,30 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                 
                 CurrentScreen::Success if key.kind == KeyEventKind::Press => {
                     match key.code {
+                        // use case: user wants to exit the application
                         KeyCode::Char('q') => {
                             app.current_screen = CurrentScreen::Exiting;
+                        }
+                        // use case: user wants to reset the application and enter in a new equation and x domain
+                        KeyCode::Char('r') => {
+                            app.reset();
                         }
                         _ => {}
                     }
                 }
-
+                // use case: expression | x domain parsing failed => options to reset app or exit program
                 CurrentScreen::Failure if key.kind == KeyEventKind::Press => {
                     match key.code {
                         KeyCode::Char('q') => {
                             app.current_screen = CurrentScreen::Exiting;
                         }
+                        KeyCode::Char('r') => {
+                            app.reset();
+                        }
                         _ => {}
                     }
                 }
-
+                // use case: exit the program
                 CurrentScreen::Exiting if key.kind == KeyEventKind::Press => {
                     match key.code {
                         KeyCode::Char('y') => {
