@@ -126,7 +126,6 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
 
         let x_min_clone = app.x_min.clone();
         let x_max_clone = app.x_max.clone();
-
         let x_axis = Axis::default()
             .title("X Axis".red())
             .style(Style::default().white())
@@ -135,7 +134,6 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
 
         let y_min_clone = app.y_min.clone();
         let y_max_clone = app.y_max.clone();
-
         let y_axis = Axis::default()
             .title("Y Axis".red())
             .style(Style::default().white())
@@ -146,7 +144,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
             .block(Block::default().title("Graph"))
             .x_axis(x_axis)
             .y_axis(y_axis);
-        let area = centered_rect(60, 25, f.size());
+        let area = centered_rect(50, 50, f.size());
         f.render_widget(chart, area)
     }
 

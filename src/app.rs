@@ -29,7 +29,7 @@ pub struct App {
 
 impl App {
 
-    // default constructor method
+    // default constructor method :: begin
     pub fn new() -> App {
         App {
             expression_input: String::new(),
@@ -43,18 +43,25 @@ impl App {
             currently_inputting: None,
         }
     }
+    // default constructor method :: end
 
     // method to reset App to original state
     pub fn reset(&mut self) {
         self.expression_input = String::new();
         self.x_domain_input = String::new();
         self.graph_vector = Vec::new();
+        self.x_min = 0.0;
+        self.x_max = 0.0;
+        self.y_min = 0.0;
+        self.y_max = 0.0;
         self.current_screen = CurrentScreen::Main;
         self.currently_inputting = None;
     }
     // function to compute graph_vector
 
     pub fn eval_expr(&mut self) -> Result<Vec<(f64,f64)>, MevalError> {
+
+        // handling expr parsing errors :: begin
         let expr: meval::Expr = match self.expression_input.parse() {
             Ok(expr) => expr,
             Err(error) => return Err(error),
@@ -63,42 +70,55 @@ impl App {
             Ok(func) => func,
             Err(error) => return Err(error),
         };
+        // handling expr parsing errors :: end
 
-        // unsafe code: I should explicitly handle potential errors, currently the program will panic! :: begin
+        // UNSAFE CODE BELOW: I should explicitly handle potential errors, currently the program will panic! :: begin
         // set x_min and x_max :: begin
-        let mut iter = self.x_domain_input.split("..");
-        let start: usize = iter.next().unwrap().parse().unwrap();
-        let end: usize = iter.next().unwrap().parse().unwrap();
-        self.x_min = start as f64;
-        self.x_max = end as f64;
+        let mut iter = self.x_domain_input.split(".."); // iter must be mut b/c of next() func.
+        let start: i64 = iter.next().unwrap().parse().unwrap(); // Range value must be a integer type
+        let end: i64 = iter.next().unwrap().parse().unwrap(); // Range value must be a interger type
+
+        // We should not be losing precision here, the user is required to enter signed integers for the x min and max values
+        self.x_min = start as f64; // storing in app state as f64
+        self.x_max = end as f64; // storing in app state as f64
         // set x_min and x_max :: end
 
         // compute y-values and update graph_vector :: begin
-        self.graph_vector = (start .. end)
+        self.graph_vector = (start ..= end)
             .enumerate()
-            .map(|(x, y)| (x as f64, func(y as f64)))
+            // we want to map x and f(x) -- tuple.0 accesses the counter (we do not want this), tuple.1 accesses x
+            .map(|tuple| (tuple.1 as f64, func(tuple.1 as f64)))
+            // collect transforms iterator into relevant collection
             .collect();
         // compute y-values and update graph_vector :: begin
 
         // get y_min and y_max :: begin
+        // ghosting iter
         let iter = self.graph_vector.iter();
-        let min_y = iter.map(|(_, y)| y).min_by(|a, b| a.partial_cmp(b).unwrap());
-
+        // computing min y value
+        let min_y = iter
+            .map(|(_, y)| y)
+            .min_by(|a, b| a.partial_cmp(b).unwrap());
+        // ghosting iter
         let iter = self.graph_vector.iter();
-        let max_y = iter.map(|(_, y)| y).max_by(|a, b| a.partial_cmp(b).unwrap());
+        // computing max y value
+        let max_y = iter
+            .map(|(_, y)| y)
+            .max_by(|a, b| a.partial_cmp(b).unwrap());
         // get y_min and y_max :: end
 
+        // unwrap min_y
         self.y_min = match min_y {
-            Some(value) => value.clone(),
-            None => 0.0,
+            Some(min_y) => min_y.clone(), // could dereference min_y instead of cloning (not using min_y after this point)
+            None => 0.0, // if None set self.y_min to 0.0 (default value)
         };
-
+        // unwrap max_y
         self.y_max = match max_y {
-            Some(value) => value.clone(),
-            None => 0.0,
+            Some(max_y) => max_y.clone(), // could dereference max_y instead of cloning (not using max_y after this point)
+            None => 0.0, // if None set self.y_max to 0.0 (default value)
         };
 
-        // returning wrapped cloned graph vector on success
+        // returning wrapped cloned graph vector on success (this cloned vector is only used to signal success to the caller)
         let vs: Vec<_> = self.graph_vector.clone();
         Ok(vs)
     }
