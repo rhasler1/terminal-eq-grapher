@@ -12,8 +12,8 @@ use ratatui::Terminal;
 use std::io;
 use std::error::Error;
 
-use terminal_queue::app::{App, CurrentScreen, CurrentlyInputting};
-use terminal_queue::ui::ui;
+use terminal_eq_grapher::app::{App, CurrentScreen, CurrentlyInputting};
+use terminal_eq_grapher::ui::ui;
 
 
 fn main() -> Result<(), Box<dyn Error>> {
