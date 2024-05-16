@@ -1,4 +1,4 @@
-use crate::app::{CurrentScreen, CurrentlyInputting};
+use crate::focus::{CurrentScreen, CurrentInput};
 use ratatui::Frame;
 use ratatui::prelude::Layout;
 
@@ -33,7 +33,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
     // bottom navigation bar :: begin
     let current_navigation_text = vec![
         // The first half of the text
-        match app.current_screen {
+        match app.focus.current_screen {
             CurrentScreen::Main => {
                 Span::styled("Input Mode", Style::default().fg(Color::LightGreen))
             }
@@ -52,13 +52,13 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         Span::styled(" | ", Style::default().fg(Color::White)),
         // The final section of the text, with hints on what the user is editing
         {
-            if let Some(inputting) = &app.currently_inputting {
-                match inputting {
-                    CurrentlyInputting::Expression => Span::styled(
+            if let Some(input) = &app.focus.current_input {
+                match input {
+                    CurrentInput::Expression => Span::styled(
                         "Inputting Expression",
                         Style::default().fg(Color::Green),
                     ),
-                    CurrentlyInputting::Xdomain => Span::styled(
+                    CurrentInput::Xdomain => Span::styled(
                         "Inputting X-Domain",
                         Style::default().fg(Color::Green),
                     ),
@@ -78,7 +78,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
     // bottom naviagtion bar ::end
 
     let current_keys_hint = {
-        match app.current_screen {
+        match app.focus.current_screen {
             CurrentScreen::Main => Span::styled(
                 "(Tab) to change input field, (Enter) to complete",
                 Style::default().fg(Color::Red),
@@ -112,26 +112,26 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
 
-    if let CurrentScreen::Success = app.current_screen {
+    if let CurrentScreen::Success = app.focus.current_screen {
         let dataset = vec![
             Dataset::default()
                 .name("Graph")
                 .marker(Marker::Dot)
                 .graph_type(GraphType::Line)
                 .style(Style::default().cyan())
-                .data(&app.graph_vector)
+                .data(&app.graph.coordinate_vector)
         ];
 
-        let x_min_clone = app.x_min.clone();
-        let x_max_clone = app.x_max.clone();
+        let x_min_clone = app.graph.x_min.clone();
+        let x_max_clone = app.graph.x_max.clone();
         let x_axis = Axis::default()
             .title("X Axis".blue())
             .style(Style::default().white())
             .bounds([x_min_clone, x_max_clone])
             .labels(vec![x_min_clone.to_string().into(), x_max_clone.to_string().into()]);
 
-        let y_min_clone = app.y_min.clone();
-        let y_max_clone = app.y_max.clone();
+        let y_min_clone = app.graph.y_min.clone();
+        let y_max_clone = app.graph.y_max.clone();
         let y_axis = Axis::default()
             .title("Y Axis".blue())
             .style(Style::default().white())
@@ -146,7 +146,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         f.render_widget(chart, area);
     }
 
-    if let CurrentScreen::Failure =  app.current_screen {
+    if let CurrentScreen::Failure =  app.focus.current_screen {
         //f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
         let popup_block = Block::default()
             .title("Parsing Failure!")
@@ -163,7 +163,7 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         f.render_widget(failure_paragraph, area);
     }
 
-    if let CurrentScreen::Exiting = app.current_screen {
+    if let CurrentScreen::Exiting = app.focus.current_screen {
         f.render_widget(Clear, f.size()); //this clears the entire screen and anything already drawn
         let popup_block = Block::default()
             .title("Y/N")

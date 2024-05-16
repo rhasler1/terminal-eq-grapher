@@ -12,9 +12,9 @@ use ratatui::Terminal;
 use std::io;
 use std::error::Error;
 
-use terminal_eq_grapher::app::{App, CurrentScreen, CurrentlyInputting};
+use terminal_eq_grapher::app::App;
+use terminal_eq_grapher::focus::{CurrentScreen, CurrentInput};
 use terminal_eq_grapher::ui::ui;
-
 
 fn main() -> Result<(), Box<dyn Error>> {
 
@@ -68,26 +68,26 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                 // essentially skil events that are not KeyEventKind::Press
                 continue;
             }
-            match app.current_screen {
+            match app.focus.current_screen {
                 CurrentScreen::Main if key.kind == KeyEventKind::Press => {
                     match key.code {
                         KeyCode::Enter => {
-                            if let Some(inputting) = &app.currently_inputting {
-                                match inputting {
-                                    CurrentlyInputting::Expression => {
-                                        app.currently_inputting = Some(CurrentlyInputting::Xdomain);
+                            if let Some(input) = &app.focus.current_input {
+                                match input {
+                                    CurrentInput::Expression => {
+                                        app.focus.current_input = Some(CurrentInput::Xdomain);
                                     }
-                                    CurrentlyInputting::Xdomain => { //TODO
+                                    CurrentInput::Xdomain => { //TODO
                                         // if Xdomain has been input then...
                                         // compute graph vector
-                                        let result = app.eval_expr();
+                                        let result = app.graph.eval_expr();
                                         // TODO: research into handling errors in a better way
                                         match result {
                                             Ok(_vec) => {
-                                                app.current_screen = CurrentScreen::Success; // on successful method call app.eval_expr()
+                                                app.focus.current_screen = CurrentScreen::Success; // on successful method call app.eval_expr()
                                             }, 
                                             Err(_err) => {
-                                                app.current_screen = CurrentScreen::Failure; // on failed method call app.eval_expr()
+                                                app.focus.current_screen = CurrentScreen::Failure; // on failed method call app.eval_expr()
                                             },
                                         };
                                     }
@@ -95,35 +95,35 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                             }
                         }
                         KeyCode::Backspace => {
-                            if let Some(inputting) = &app.currently_inputting {
-                                match inputting {
-                                    CurrentlyInputting::Expression => {
-                                        app.expression_input.pop();
+                            if let Some(input) = &app.focus.current_input {
+                                match input {
+                                    CurrentInput::Expression => {
+                                        app.graph.expression_input.pop();
                                     }
-                                    CurrentlyInputting::Xdomain => {
-                                        app.x_domain_input.pop();
+                                    CurrentInput::Xdomain => {
+                                        app.graph.x_domain_input.pop();
                                     }
                                 }
                             }
                         }
                         KeyCode::Esc => {
-                            app.current_screen = CurrentScreen::Main;
-                            app.currently_inputting = None;
+                            app.focus.current_screen = CurrentScreen::Main;
+                            app.focus.current_input = None;
                         }
                         KeyCode::Tab => {
-                            app.toggle_input();
+                            app.focus.toggle_input();
                         }
                         KeyCode::Char('q') => {
-                            app.current_screen = CurrentScreen::Exiting;
+                            app.focus.current_screen = CurrentScreen::Exiting;
                         }
                         KeyCode::Char(value) => {
-                            if let Some(inputting) = &app.currently_inputting {
-                                match inputting {
-                                    CurrentlyInputting::Expression => {
-                                        app.expression_input.push(value);
+                            if let Some(input) = &app.focus.current_input {
+                                match input {
+                                    CurrentInput::Expression => {
+                                        app.graph.expression_input.push(value);
                                     }
-                                    CurrentlyInputting::Xdomain => {
-                                        app.x_domain_input.push(value);
+                                    CurrentInput::Xdomain => {
+                                        app.graph.x_domain_input.push(value);
                                     }
                                 }
                             }
@@ -136,7 +136,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                     match key.code {
                         // use case: user wants to exit the application
                         KeyCode::Char('q') => {
-                            app.current_screen = CurrentScreen::Exiting;
+                            app.focus.current_screen = CurrentScreen::Exiting;
                         }
                         // use case: user wants to reset the application and enter in a new equation and x domain
                         KeyCode::Char('r') => {
@@ -149,7 +149,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App,) -> io::Result
                 CurrentScreen::Failure if key.kind == KeyEventKind::Press => {
                     match key.code {
                         KeyCode::Char('q') => {
-                            app.current_screen = CurrentScreen::Exiting;
+                            app.focus.current_screen = CurrentScreen::Exiting;
                         }
                         KeyCode::Char('r') => {
                             app.reset();
