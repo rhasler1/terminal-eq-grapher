@@ -1,4 +1,3 @@
-use crate::focus::{CurrentScreen, CurrentInput};
 use ratatui::Frame;
 use ratatui::prelude::Layout;
 
@@ -6,6 +5,8 @@ use ratatui::{
     prelude::*,
     widgets::{block::*, *},
 };
+
+use crate::components::focus::{CurrentInput, CurrentScreen};
 
 pub fn ui(f: &mut Frame, app: &crate::app::App) {
     let chunks = Layout::default()

@@ -1,20 +1,29 @@
-use crossterm::event::{self, EnableMouseCapture, Event, KeyEventKind};
 use crossterm::execute;
 use crossterm::terminal::{enable_raw_mode, EnterAlternateScreen};
-use crossterm::event::DisableMouseCapture;
 use crossterm::terminal::{disable_raw_mode, LeaveAlternateScreen};
+use crossterm::event::{self, EnableMouseCapture, Event, KeyEventKind};
+use crossterm::event::DisableMouseCapture;
 use crossterm::event::KeyCode;
 
 use ratatui::backend::CrosstermBackend;
 use ratatui::prelude::Backend;
 use ratatui::Terminal;
 
-use std::io;
 use std::error::Error;
+use std::io;
 
-use terminal_eq_grapher::app::App;
-use terminal_eq_grapher::focus::{CurrentScreen, CurrentInput};
-use terminal_eq_grapher::ui::ui;
+pub mod app;
+pub mod ui;
+pub mod components;
+
+use crate::app::App;
+use crate::ui::ui;
+
+use components::focus::{CurrentInput, CurrentScreen};
+
+//use terminal_eq_grapher::app::App;
+//use terminal_eq_grapher::focus::{CurrentScreen, CurrentInput};
+//use terminal_eq_grapher::ui::ui;
 
 fn main() -> Result<(), Box<dyn Error>> {
 

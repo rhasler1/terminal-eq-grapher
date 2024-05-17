@@ -1,5 +1,4 @@
-use crate::graph::Graph;
-use crate::focus::Focus;
+use crate::components::{graph::Graph, focus::Focus};
 
 // application struct
 pub struct App {
