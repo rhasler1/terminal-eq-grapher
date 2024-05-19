@@ -1,4 +1,3 @@
-
 pub enum CurrentScreen {
     Main,
     Success,

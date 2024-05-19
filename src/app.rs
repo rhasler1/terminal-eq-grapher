@@ -6,19 +6,14 @@ use crossterm::event::DisableMouseCapture;
 use crossterm::event::KeyCode;
 
 use ratatui::backend::CrosstermBackend;
-//use ratatui::prelude::Backend;
 use ratatui::Terminal;
 
-//use std::error::Error;
 use std::io;
 
 use crate::ui::ui;
-
 use crate::components::focus::{CurrentInput, CurrentScreen};
-
 use crate::components::{graph::Graph, focus::Focus};
 
-// application struct
 pub struct App {
     pub graph: Graph,
     pub focus: Focus,
@@ -53,11 +48,13 @@ impl App {
             // draw is the ratatui comand to draw a Fram to the terminal
             // |f| ui(f, &app) tells draw that we want to take f: <Frame>
             // and pass it to our function ui, and ui will draw to that Frame.
+
+            // change to... for each component draw.
             terminal.draw(|f| ui(f, self))?;
     
             if let Event::Key(key) = event::read()? {
                 if key.kind == event::KeyEventKind::Release {
-                    // essentially skil events that are not KeyEventKind::Press
+                    // skip events that are not KeyEventKind::Press
                     continue;
                 }
                 match self.focus.current_screen {
@@ -73,13 +70,12 @@ impl App {
                                             // if Xdomain has been input then...
                                             // compute graph vector
                                             let result = self.graph.eval_expr();
-                                            // TODO: research into handling errors in a better way
                                             match result {
                                                 Ok(_vec) => {
-                                                    self.focus.current_screen = CurrentScreen::Success; // on successful method call app.eval_expr()
+                                                    self.focus.current_screen = CurrentScreen::Success; // on successful method call to app.eval_expr()
                                                 }, 
                                                 Err(_err) => {
-                                                    self.focus.current_screen = CurrentScreen::Failure; // on failed method call app.eval_expr()
+                                                    self.focus.current_screen = CurrentScreen::Failure; // on failed method call to app.eval_expr()
                                                 },
                                             };
                                         }
@@ -90,10 +86,10 @@ impl App {
                                 if let Some(input) = &self.focus.current_input {
                                     match input {
                                         CurrentInput::Expression => {
-                                            self.graph.expression_input.pop();
+                                            self.graph.pop_expression_input();
                                         }
                                         CurrentInput::Xdomain => {
-                                            self.graph.x_domain_input.pop();
+                                            self.graph.pop_x_domain_input();
                                         }
                                     }
                                 }
@@ -112,10 +108,10 @@ impl App {
                                 if let Some(input) = &self.focus.current_input {
                                     match input {
                                         CurrentInput::Expression => {
-                                            self.graph.expression_input.push(value);
+                                            self.graph.push_expression_input(value);
                                         }
                                         CurrentInput::Xdomain => {
-                                            self.graph.x_domain_input.push(value);
+                                            self.graph.push_x_domain_input(value);
                                         }
                                     }
                                 }
@@ -152,11 +148,11 @@ impl App {
                     // use case: exit the program
                     CurrentScreen::Exiting if key.kind == KeyEventKind::Press => {
                         match key.code {
-                            KeyCode::Char('y') => {
+                            KeyCode::Char('y' | 'q') => {
                                 break;
                             }
-                            KeyCode::Char('n') | KeyCode::Char('q') => {
-                                break;
+                            KeyCode::Char('n') => {
+                                self.reset();
                             }
                             _ => {}
                         }

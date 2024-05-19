@@ -1,6 +1,4 @@
-
 use meval::Error as MevalError;
-
 
 #[derive(Default)]
 pub struct Graph {
@@ -73,4 +71,21 @@ impl Graph {
         let vs: Vec<_> = self.coordinate_vector.clone();
         Ok(vs)
     }
+
+    pub fn push_expression_input(&mut self, value: char) {
+        self.expression_input.push(value);
+    }
+
+    pub fn push_x_domain_input(&mut self, value: char) {
+        self.x_domain_input.push(value);
+    }
+
+    pub fn pop_expression_input(&mut self) {
+        self.expression_input.pop();
+    }
+
+    pub fn pop_x_domain_input(&mut self) {
+        self.x_domain_input.pop();
+    }
+
 }

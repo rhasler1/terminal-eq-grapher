@@ -109,9 +109,25 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(chunks[2]);
     // new layout in this space :: end
-
     f.render_widget(mode_footer, footer_chunks[0]);
     f.render_widget(key_notes_footer, footer_chunks[1]);
+
+    if let CurrentScreen::Main = app.focus.current_screen {
+        let main_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(chunks[1]);
+        // user text box
+        let expr_input = Paragraph::new(app.graph.expression_input.as_str())
+            .style(Style::default().fg(Color::Yellow))
+            .block(Block::default().borders(Borders::ALL).title("Expression Input"));
+        let domain_input = Paragraph::new(app.graph.x_domain_input.as_str())
+            .style(Style::default().fg(Color::Yellow))
+            .block(Block::default().borders(Borders::ALL).title("X Domain Input"));
+
+        f.render_widget(expr_input, main_chunks[0]);
+        f.render_widget(domain_input, main_chunks[1]);
+    }
 
     if let CurrentScreen::Success = app.focus.current_screen {
         let dataset = vec![
