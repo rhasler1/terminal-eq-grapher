@@ -12,6 +12,11 @@ use crate::app::App;
 // 3. implement tokio for async event handling
 // 4. document
 // 5. improve ui
+// 6. add robustness to component::graph::Graph & Graph.eval_expr()
+// 6.5 research the capabilities of Ratatui Chart
+
+// Known Unhandled Errors:
+// division by 0 results in unhandled error.
 
 fn main() -> Result<(), Box<dyn Error>> {
     // create the app and run

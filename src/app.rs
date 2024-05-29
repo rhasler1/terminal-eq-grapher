@@ -48,8 +48,6 @@ impl App {
             // draw is the ratatui comand to draw a Fram to the terminal
             // |f| ui(f, &app) tells draw that we want to take f: <Frame>
             // and pass it to our function ui, and ui will draw to that Frame.
-
-            // change to... for each component draw.
             terminal.draw(|f| ui(f, self))?;
     
             if let Event::Key(key) = event::read()? {
@@ -66,9 +64,8 @@ impl App {
                                         CurrentInput::Expression => {
                                             self.focus.current_input = Some(CurrentInput::Xdomain);
                                         }
-                                        CurrentInput::Xdomain => { //TODO
-                                            // if Xdomain has been input then...
-                                            // compute graph vector
+                                        CurrentInput::Xdomain => {
+                                            // if Xdomain has been input then compute graph vector
                                             let result = self.graph.eval_expr();
                                             match result {
                                                 Ok(_vec) => {
