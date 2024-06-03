@@ -1,3 +1,12 @@
+use ratatui::Frame;
+use ratatui::prelude::Layout;
+
+use ratatui::{
+    prelude::*,
+    widgets::{block::*, *},
+};
+
+use crate::action::Action;
 use meval::Error as MevalError;
 
 pub enum GraphState {
@@ -101,8 +110,10 @@ impl Graph {
         self.x_domain_input.pop();
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self, f: &mut Frame, area: Rect) {
         //if the state is CanDraw then draw, else don't.
+        // eval_expr?
+        // if so ... draw 
     }
 
 }

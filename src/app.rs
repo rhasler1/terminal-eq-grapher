@@ -1,25 +1,43 @@
 use crossterm::execute;
 use crossterm::terminal::{enable_raw_mode, EnterAlternateScreen};
 use crossterm::terminal::{disable_raw_mode, LeaveAlternateScreen};
-use crossterm::event::{self, EnableMouseCapture, Event, KeyEventKind};
+use crossterm::event::{self, EnableMouseCapture, Event, KeyEvent, KeyEventKind};
 use crossterm::event::DisableMouseCapture;
 use crossterm::event::KeyCode;
 
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
+use ratatui::Frame;
+use ratatui::prelude::Layout;
+
+use ratatui::{
+    prelude::*,
+    widgets::{block::*, *},
+};
 
 use std::io;
 
-use crate::ui::ui;
-use crate::components::focus::{CurrentInput, CurrentScreen};
-use crate::components::{graph::Graph, focus::Focus};
-use crate::components::input::Input;
+use crate::components::expr::Expr;
+use crate::components::domain::Domain;
+use crate::components::graph::Graph;
+use crate::components::title::Title;
+use crate::components::help::Help;
 use crate::action::Action;
 
+#[derive(Clone, Copy)]
+pub enum Focus {
+    Expr,
+    Domain,
+    Graph,
+}
+
 pub struct App {
-    pub graph: Graph,
     pub focus: Focus,
-    pub input: Input,
+    pub title: Title,
+    pub help: Help,
+    pub graph: Graph,
+    pub expr: Expr,
+    pub domain: Domain,
 }
 
 impl App {
@@ -27,187 +45,152 @@ impl App {
     // default constructor method :: begin
     pub fn new() -> App {
         App {
+            focus: Focus::Expr,
+            title: Title::new(),
+            help: Help::new(),
+            expr: Expr::new(),
+            domain: Domain::new(),
             graph: Graph::new(),
-            focus: Focus::new(),
-            input: Input::new(),
         }
     }
     // default constructor method :: end
 
     // method to reset App to original state
     pub fn reset(&mut self) {
+        self.focus = Focus::Expr;
+        self.title.reset();
+        self.help.reset();
+        self.expr.reset();
+        self.domain.reset();
         self.graph.reset();
-        self.focus.reset();
-        self.input.reset();
+    }
+
+    pub fn draw(&mut self, f: &mut ratatui::prelude::Frame) -> io::Result<bool> {
+        let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Title
+            Constraint::Min(1), // Component
+            Constraint::Length(3), // Help
+        ])
+        .split(f.size());
+
+        // draw title::begin
+        self.title.draw(f, chunks[0]);
+        // draw title::end
+
+        // draw main component{Expr, Domain, or Graph}::begin
+        match self.focus {
+            Focus::Expr => {
+                self.expr.draw(f, chunks[1]);
+            }
+            Focus::Domain => {
+                self.domain.draw(f, chunks[1]);
+            }
+            Focus::Graph => { 
+                // may need to pass self.expr.expr_text and self.domain.domain_text as parameters.
+                self.graph.draw(f, chunks[1]);
+            }
+        }
+        // draw main component{Expr, Domain, or Graph}::end
+
+        self.help.draw(f, chunks[2]);
+        Ok(true)
     }
 
     pub fn run(&mut self) -> io::Result<bool> {
-        // setup terminal
+        // set up terminal::begin
         enable_raw_mode()?;
-        let mut stderr = io::stderr();
+        let mut stderr: io::Stderr = io::stderr();
         execute!(stderr, EnterAlternateScreen, EnableMouseCapture)?;
-        let backend = CrosstermBackend::new(stderr);
-        let mut terminal = Terminal::new(backend)?;
+        let backend: CrosstermBackend<io::Stderr> = CrosstermBackend::new(stderr);
+        let mut terminal: Terminal<CrosstermBackend<io::Stderr>> = Terminal::new(backend)?;
+        // set up terminal::end
 
+        // run loop::begin
         loop {
-            // draw is the ratatui comand to draw a Fram to the terminal
-            // |f| ui(f, &app) tells draw that we want to take f: <Frame>
-            // and pass it to our function ui, and ui will draw to that Frame.
-            //terminal.draw(|f| ui(f, self))?;
-            // testing component draw
-            terminal.draw(|f| {
-                ui(f, self);
-                self.input.draw(f, f.size());
+            // draw to terminal::begin
+            terminal.draw(|f: &mut ratatui::prelude::Frame| {
+                // still need to implement error handling in self.draw, self.expr.draw, ...
+                self.draw(f);
             })?;
+            // draw to terminal::end
 
-
+            // process next event::begin
             if let Event::Key(key) = event::read()? {
-                if key.kind == event::KeyEventKind::Release {
-                    // skip events that are not KeyEventKind::Press
-                    continue;
-                }
-
-                // get action and send to components
                 if key.kind == event::KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Tab => {
-                            self.input.update();
-                            //Action::ChangeFocus
+                    match self.event(key) {
+                        Ok(state) => {
+                            // user wishes to quit app
+                            if !state && key.code == KeyCode::Char('q') {
+                                return Ok(true)
+                            }
                         }
-                        KeyCode::Enter => {
-                            self.graph.update();
-                            //Action::Submit
+                        Err(_err) => {
+                            // error occurred somewhere in event handling
+                            return Ok(false)
                         }
-                        KeyCode::Char('r') => {
-                            self.reset();
-                            //Action::Reset
-                        }
-                        KeyCode::Char('q') => {
-                            //self.quit();
-                            //Action::Quit
-                        }
-                        KeyCode::Backspace => {
-                            self.input.pop_input();
-                        }
-                        KeyCode::Char(c) => {
-                            self.input.push_input(c);
-                        }
-                        _ => {}
                     }
                 }
+            }
+            // process next event::end
+        }
+    }
 
-                match self.focus.current_screen {
-                    CurrentScreen::Main if key.kind == KeyEventKind::Press => {
-                        match key.code {
-                            KeyCode::Enter => {
-                                if let Some(input) = &self.focus.current_input {
-                                    match input {
-                                        CurrentInput::Expression => {
-                                            self.focus.current_input = Some(CurrentInput::Xdomain);
-                                        }
-                                        CurrentInput::Xdomain => {
-                                            // if Xdomain has been input then compute graph vector
-                                            let result = self.graph.eval_expr();
-                                            match result {
-                                                Ok(_vec) => {
-                                                    self.focus.current_screen = CurrentScreen::Success; // on successful method call to app.eval_expr()
-                                                }, 
-                                                Err(_err) => {
-                                                    self.focus.current_screen = CurrentScreen::Failure; // on failed method call to app.eval_expr()
-                                                },
-                                            };
-                                        }
-                                    }
-                                }
-                            }
-                            KeyCode::Backspace => {
-                                if let Some(input) = &self.focus.current_input {
-                                    match input {
-                                        CurrentInput::Expression => {
-                                            self.graph.pop_expression_input();
-                                        }
-                                        CurrentInput::Xdomain => {
-                                            self.graph.pop_x_domain_input();
-                                        }
-                                    }
-                                }
-                            }
-                            KeyCode::Esc => {
-                                self.focus.current_screen = CurrentScreen::Main;
-                                self.focus.current_input = None;
-                            }
-                            KeyCode::Tab => {
-                                self.focus.toggle_input();
-                            }
-                            KeyCode::Char('q') => {
-                                self.focus.current_screen = CurrentScreen::Exiting;
-                            }
-                            KeyCode::Char(value) => {
-                                if let Some(input) = &self.focus.current_input {
-                                    match input {
-                                        CurrentInput::Expression => {
-                                            self.graph.push_expression_input(value);
-                                        }
-                                        CurrentInput::Xdomain => {
-                                            self.graph.push_x_domain_input(value);
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                    
-                    CurrentScreen::Success if key.kind == KeyEventKind::Press => {
-                        match key.code {
-                            // use case: user wants to exit the application
-                            KeyCode::Char('q') => {
-                                self.focus.current_screen = CurrentScreen::Exiting;
-                            }
-                            // use case: user wants to reset the application and enter in a new equation and x domain
-                            KeyCode::Char('r') => {
-                                self.reset();
-                            }
-                            _ => {}
-                        }
-                    }
-                    // use case: expression | x domain parsing failed => options to reset app or exit program
-                    CurrentScreen::Failure if key.kind == KeyEventKind::Press => {
-                        match key.code {
-                            KeyCode::Char('q') => {
-                                self.focus.current_screen = CurrentScreen::Exiting;
-                            }
-                            KeyCode::Char('r') => {
-                                self.reset();
-                            }
-                            _ => {}
-                        }
-                    }
-                    // use case: exit the program
-                    CurrentScreen::Exiting if key.kind == KeyEventKind::Press => {
-                        match key.code {
-                            KeyCode::Char('y' | 'q') => {
-                                break;
-                            }
-                            KeyCode::Char('n') => {
-                                self.reset();
-                            }
-                            _ => {}
-                        }
-                    }
-                    _ => {}
+    fn event(&mut self, key: KeyEvent) -> io::Result<bool> {
+        if self.components_event(key)? {
+            return Ok(true);
+        }
+        if self.move_focus(key)? {
+            return Ok(true);
+        }
+        Ok(false)
+    }
+
+    fn move_focus(&mut self, key: KeyEvent) -> io::Result<bool> {
+        match self.focus {
+            Focus::Expr => {
+                if key.code == KeyCode::Tab {
+                    self.focus = Focus::Domain;
+                    return Ok(true)
+                }
+            }
+            Focus::Domain => {
+                if key.code == KeyCode::Tab {
+                    self.focus = Focus::Graph;
+                    return Ok(true)
+                }
+            }
+            Focus::Graph => {
+                if key.code == KeyCode::Tab {
+                    self.reset();
+                    return Ok(true)
                 }
             }
         }
-        // restore terminal
-        disable_raw_mode()?;
-        execute!(
-            terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        )?;
-        terminal.show_cursor()?;
-
-        Ok(true)
+        return Ok(false)
     }
+
+    fn components_event(&mut self, key: KeyEvent) -> io::Result<bool> {
+        match self.focus {
+            Focus::Expr => {
+                self.expr.event(key)?;
+            }
+            Focus::Domain => {
+                self.domain.event(key)?;
+            }
+            // TODO: graph.event
+            Focus::Graph => {
+                // on enter generate graph
+                // self.graph.event(key, self.expr.expr_title.clone(), self.domain.domain_title.clone())?
+                //     -> graph.eval_expr()?
+                //         -> <stored coordinated vector on success>
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+
+
 }
