@@ -19,17 +19,17 @@ pub fn ui(f: &mut Frame, app: &crate::app::App) {
         .split(f.size());
     
     // Render the title
-    let title_block = Block::default()
-        .borders(Borders::ALL)
-        .style(Style::default());
+    //let title_block = Block::default()
+    //    .borders(Borders::ALL)
+    //    .style(Style::default());
 
-    let title = Paragraph::new(Text::styled(
-        "Equation Grapher",
-        Style::default().fg(Color::Green),
-    ))
-    .block(title_block);
+    //let title = Paragraph::new(Text::styled(
+    //    "Equation Grapher",
+    //    Style::default().fg(Color::Green),
+    //))
+    //.block(title_block);
 
-    f.render_widget(title, chunks[0]);
+    //f.render_widget(title, chunks[0]);
 
     // bottom navigation bar :: begin
     let current_navigation_text = vec![

@@ -13,10 +13,13 @@ use std::io;
 use crate::ui::ui;
 use crate::components::focus::{CurrentInput, CurrentScreen};
 use crate::components::{graph::Graph, focus::Focus};
+use crate::components::input::Input;
+use crate::action::Action;
 
 pub struct App {
     pub graph: Graph,
     pub focus: Focus,
+    pub input: Input,
 }
 
 impl App {
@@ -26,6 +29,7 @@ impl App {
         App {
             graph: Graph::new(),
             focus: Focus::new(),
+            input: Input::new(),
         }
     }
     // default constructor method :: end
@@ -34,6 +38,7 @@ impl App {
     pub fn reset(&mut self) {
         self.graph.reset();
         self.focus.reset();
+        self.input.reset();
     }
 
     pub fn run(&mut self) -> io::Result<bool> {
@@ -48,13 +53,49 @@ impl App {
             // draw is the ratatui comand to draw a Fram to the terminal
             // |f| ui(f, &app) tells draw that we want to take f: <Frame>
             // and pass it to our function ui, and ui will draw to that Frame.
-            terminal.draw(|f| ui(f, self))?;
-    
+            //terminal.draw(|f| ui(f, self))?;
+            // testing component draw
+            terminal.draw(|f| {
+                ui(f, self);
+                self.input.draw(f, f.size());
+            })?;
+
+
             if let Event::Key(key) = event::read()? {
                 if key.kind == event::KeyEventKind::Release {
                     // skip events that are not KeyEventKind::Press
                     continue;
                 }
+
+                // get action and send to components
+                if key.kind == event::KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Tab => {
+                            self.input.update();
+                            //Action::ChangeFocus
+                        }
+                        KeyCode::Enter => {
+                            self.graph.update();
+                            //Action::Submit
+                        }
+                        KeyCode::Char('r') => {
+                            self.reset();
+                            //Action::Reset
+                        }
+                        KeyCode::Char('q') => {
+                            //self.quit();
+                            //Action::Quit
+                        }
+                        KeyCode::Backspace => {
+                            self.input.pop_input();
+                        }
+                        KeyCode::Char(c) => {
+                            self.input.push_input(c);
+                        }
+                        _ => {}
+                    }
+                }
+
                 match self.focus.current_screen {
                     CurrentScreen::Main if key.kind == KeyEventKind::Press => {
                         match key.code {

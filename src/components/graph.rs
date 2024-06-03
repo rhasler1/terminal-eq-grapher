@@ -1,7 +1,12 @@
 use meval::Error as MevalError;
 
-#[derive(Default)]
+pub enum GraphState {
+    CanDraw,
+    CannotDraw,
+}
+
 pub struct Graph {
+    pub graph_state: GraphState,
     pub coordinate_vector: Vec<(f64, f64)>,
     pub expression_input: String,
     pub x_domain_input: String,
@@ -15,6 +20,7 @@ impl Graph {
     // constructor
     pub fn new() -> Self {
         Self {
+            graph_state: GraphState::CannotDraw,
             coordinate_vector: Vec::new(),
             expression_input: String::new(),
             x_domain_input: String::new(),
@@ -26,6 +32,7 @@ impl Graph {
     }
 
     pub fn reset(&mut self) {
+        self.graph_state = GraphState::CannotDraw;
         self.coordinate_vector = Vec::new();
         self.expression_input = String::new();
         self.x_domain_input = String::new();
@@ -33,7 +40,9 @@ impl Graph {
         self.x_max = 0.0;
         self.y_min = 0.0;
         self.y_max = 0.0;
-    } 
+    }
+
+    pub fn update(&mut self) {}
     
     pub fn eval_expr(&mut self) -> Result<Vec<(f64,f64)>, MevalError> {
 
@@ -72,6 +81,10 @@ impl Graph {
         Ok(vs)
     }
 
+    pub fn pop_input(&mut self) {
+        
+    }
+
     pub fn push_expression_input(&mut self, value: char) {
         self.expression_input.push(value);
     }
@@ -86,6 +99,10 @@ impl Graph {
 
     pub fn pop_x_domain_input(&mut self) {
         self.x_domain_input.pop();
+    }
+
+    pub fn draw(&mut self) {
+        //if the state is CanDraw then draw, else don't.
     }
 
 }

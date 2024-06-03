@@ -1,5 +1,6 @@
 use std::error::Error;
 
+pub mod action;
 pub mod app;
 pub mod ui;
 pub mod components;
