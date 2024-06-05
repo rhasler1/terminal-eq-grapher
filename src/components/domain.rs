@@ -1,8 +1,5 @@
 use std::io;
-
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyCode;
-
+use crossterm::event::{KeyEvent, KeyCode};
 use ratatui::{
     Frame,
     prelude::*,
@@ -34,7 +31,7 @@ impl Domain {
                 self.pop();
                 Ok(false)
             }
-            _ => {Ok(true)}
+            _ => { Ok(false) }
         }
     }
 

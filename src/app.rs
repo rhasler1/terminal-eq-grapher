@@ -1,31 +1,25 @@
-use crossterm::execute;
-use crossterm::terminal::{enable_raw_mode, EnterAlternateScreen};
-use crossterm::terminal::{disable_raw_mode, LeaveAlternateScreen};
-use crossterm::event::{self, EnableMouseCapture, Event, KeyEvent, KeyEventKind};
-use crossterm::event::DisableMouseCapture;
-use crossterm::event::KeyCode;
-
-use ratatui::backend::CrosstermBackend;
-use ratatui::Terminal;
-use ratatui::Frame;
-use ratatui::prelude::Layout;
-
-use ratatui::{
-    prelude::*,
-    widgets::{block::*, *},
+use std::io::{self};
+use crossterm::{
+    execute,
+    terminal::{enable_raw_mode, EnterAlternateScreen},
+    terminal::{disable_raw_mode, LeaveAlternateScreen},
+    event::{self, EnableMouseCapture, Event, KeyEvent, DisableMouseCapture, KeyCode}
 };
-
-use std::io;
-
+use ratatui::{
+    backend::CrosstermBackend,
+    Terminal,
+    prelude::*
+};
 use crate::components::expr::Expr;
 use crate::components::domain::Domain;
 use crate::components::graph::Graph;
 use crate::components::title::Title;
 use crate::components::help::Help;
-use crate::action::Action;
+use crate::components::home::Home;
 
 #[derive(Clone, Copy)]
 pub enum Focus {
+    Home,
     Expr,
     Domain,
     Graph,
@@ -35,19 +29,21 @@ pub struct App {
     pub focus: Focus,
     pub title: Title,
     pub help: Help,
-    pub graph: Graph,
+    pub home: Home,
     pub expr: Expr,
     pub domain: Domain,
+    pub graph: Graph,
 }
 
 impl App {
 
     // default constructor method :: begin
-    pub fn new() -> App {
-        App {
-            focus: Focus::Expr,
+    pub fn new() -> Self {
+        Self {
+            focus: Focus::Home,
             title: Title::new(),
             help: Help::new(),
+            home: Home::new(),
             expr: Expr::new(),
             domain: Domain::new(),
             graph: Graph::new(),
@@ -57,9 +53,10 @@ impl App {
 
     // method to reset App to original state
     pub fn reset(&mut self) {
-        self.focus = Focus::Expr;
+        self.focus = Focus::Home;
         self.title.reset();
         self.help.reset();
+        //self.home.reset(); // no home.reset() method
         self.expr.reset();
         self.domain.reset();
         self.graph.reset();
@@ -78,9 +75,11 @@ impl App {
         // draw title::begin
         self.title.draw(f, chunks[0]);
         // draw title::end
-
         // draw main component{Expr, Domain, or Graph}::begin
         match self.focus {
+            Focus::Home => {
+                self.home.draw(f, chunks[1]);
+            }
             Focus::Expr => {
                 self.expr.draw(f, chunks[1]);
             }
@@ -93,8 +92,9 @@ impl App {
             }
         }
         // draw main component{Expr, Domain, or Graph}::end
-
+        // draw help::begin
         self.help.draw(f, chunks[2]);
+        // draw help::end
         Ok(true)
     }
 
@@ -109,26 +109,59 @@ impl App {
 
         // run loop::begin
         loop {
+            // update title and help blocks::begin
+            self.title.update(self.focus);
+            self.help.update(self.focus);
+            // update title and help blocks::end
+
             // draw to terminal::begin
             terminal.draw(|f: &mut ratatui::prelude::Frame| {
-                // still need to implement error handling in self.draw, self.expr.draw, ...
-                self.draw(f);
+                // TODO: implement error handling in draw
+                match self.draw(f) {
+                    Ok(_state) => {}//TODO
+                    Err(_err) => {} //TODO
+                }
             })?;
             // draw to terminal::end
 
             // process next event::begin
             if let Event::Key(key) = event::read()? {
+                // exit application::begin
+                if key.code == KeyCode::Char('q') {
+                    // restore terminal
+                    disable_raw_mode()?;
+                    execute!(
+                        terminal.backend_mut(),
+                        LeaveAlternateScreen,
+                        DisableMouseCapture
+                    )?;
+                    terminal.show_cursor()?;
+                    return Ok(true)
+                }
+                // exit application::end
+
                 if key.kind == event::KeyEventKind::Press {
                     match self.event(key) {
                         Ok(state) => {
                             // user wishes to quit app
-                            if !state && key.code == KeyCode::Char('q') {
+                            if state && key.code == KeyCode::Char('q') {
+                                // restore terminal
+                                disable_raw_mode()?;
+                                execute!(
+                                    terminal.backend_mut(),
+                                    LeaveAlternateScreen,
+                                    DisableMouseCapture
+                                )?;
+                                terminal.show_cursor()?;
                                 return Ok(true)
                             }
                         }
                         Err(_err) => {
                             // error occurred somewhere in event handling
-                            return Ok(false)
+                            // --this branch does not execute on parsing error in graph.eval_expr()
+                            // --parsing error is currently being handled in graph.event
+                            // TODO: propogate error to caller (here) and handle
+                            self.reset();
                         }
                     }
                 }
@@ -147,8 +180,32 @@ impl App {
         Ok(false)
     }
 
+    fn components_event(&mut self, key: KeyEvent) -> io::Result<bool> {
+        match self.focus {
+            Focus::Home => {
+                self.home.event(key)?;
+            }
+            Focus::Expr => {
+                self.expr.event(key)?;
+            }
+            Focus::Domain => {
+                self.domain.event(key)?;
+            }
+            Focus::Graph => {
+                self.graph.event(key, &self.expr.expr_text, &self.domain.domain_text)?;
+            }
+        }
+        Ok(false)
+    }
+
     fn move_focus(&mut self, key: KeyEvent) -> io::Result<bool> {
         match self.focus {
+            Focus::Home => {
+                if key.code == KeyCode::Tab {
+                    self.focus = Focus::Expr;
+                    return Ok(true)
+                }
+            }
             Focus::Expr => {
                 if key.code == KeyCode::Tab {
                     self.focus = Focus::Domain;
@@ -170,27 +227,4 @@ impl App {
         }
         return Ok(false)
     }
-
-    fn components_event(&mut self, key: KeyEvent) -> io::Result<bool> {
-        match self.focus {
-            Focus::Expr => {
-                self.expr.event(key)?;
-            }
-            Focus::Domain => {
-                self.domain.event(key)?;
-            }
-            // TODO: graph.event
-            Focus::Graph => {
-                // on enter generate graph
-                // self.graph.event(key, self.expr.expr_title.clone(), self.domain.domain_title.clone())?
-                //     -> graph.eval_expr()?
-                //         -> <stored coordinated vector on success>
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    }
-
-
-
 }

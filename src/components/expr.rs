@@ -1,8 +1,5 @@
 use std::io;
-
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyCode;
-
+use crossterm::event::{KeyEvent, KeyCode};
 use ratatui::{
     Frame,
     prelude::*,

@@ -1,24 +1,14 @@
-use ratatui::Frame;
-use ratatui::prelude::Layout;
-
+use std::io;
+use crossterm::event::{KeyEvent, KeyCode};
 use ratatui::{
+    Frame,
     prelude::*,
     widgets::{block::*, *},
 };
-
-use crate::action::Action;
 use meval::Error as MevalError;
 
-pub enum GraphState {
-    CanDraw,
-    CannotDraw,
-}
-
 pub struct Graph {
-    pub graph_state: GraphState,
     pub coordinate_vector: Vec<(f64, f64)>,
-    pub expression_input: String,
-    pub x_domain_input: String,
     pub x_min: f64,
     pub x_max: f64,
     pub y_min: f64,
@@ -29,10 +19,7 @@ impl Graph {
     // constructor
     pub fn new() -> Self {
         Self {
-            graph_state: GraphState::CannotDraw,
             coordinate_vector: Vec::new(),
-            expression_input: String::new(),
-            x_domain_input: String::new(),
             x_min: 0.0,
             x_max: 0.0,
             y_min: 0.0,
@@ -41,24 +28,33 @@ impl Graph {
     }
 
     pub fn reset(&mut self) {
-        self.graph_state = GraphState::CannotDraw;
         self.coordinate_vector = Vec::new();
-        self.expression_input = String::new();
-        self.x_domain_input = String::new();
         self.x_min = 0.0;
         self.x_max = 0.0;
         self.y_min = 0.0;
         self.y_max = 0.0;
     }
 
-    pub fn update(&mut self) {}
+    pub fn event(&mut self, key: KeyEvent, expr: &String, domain: &String) -> io::Result<bool> {
+        if key.code == KeyCode::Enter {
+            match self.eval_expr(&expr, &domain) {
+                Ok(_state) => {
+                    return Ok(true)
+                }
+                Err(_err) => { // 
+                    return Ok(false)
+                }
+            }
+        }
+        Ok(false)
+    }
     
-    pub fn eval_expr(&mut self) -> Result<Vec<(f64,f64)>, MevalError> {
+    pub fn eval_expr(&mut self, expr: &String, domain: &String) -> Result<Vec<(f64,f64)>, MevalError> {
 
-        let expr: meval::Expr = self.expression_input.parse()?;
+        let expr: meval::Expr = expr.parse()?;
         let func = expr.bind("x")?;
 
-        let mut iter = self.x_domain_input.split("..");
+        let mut iter = domain.split("..");
         let start: i64 = iter.next().unwrap_or_default().parse().unwrap_or_default();
         let end: i64 = iter.next().unwrap_or_default().parse().unwrap_or_default();
         self.x_min = start as f64;
@@ -90,30 +86,34 @@ impl Graph {
         Ok(vs)
     }
 
-    pub fn pop_input(&mut self) {
-        
-    }
-
-    pub fn push_expression_input(&mut self, value: char) {
-        self.expression_input.push(value);
-    }
-
-    pub fn push_x_domain_input(&mut self, value: char) {
-        self.x_domain_input.push(value);
-    }
-
-    pub fn pop_expression_input(&mut self) {
-        self.expression_input.pop();
-    }
-
-    pub fn pop_x_domain_input(&mut self) {
-        self.x_domain_input.pop();
-    }
 
     pub fn draw(&mut self, f: &mut Frame, area: Rect) {
-        //if the state is CanDraw then draw, else don't.
-        // eval_expr?
-        // if so ... draw 
-    }
+        let dataset = vec![
+            Dataset::default()
+                .name("Graph")
+                .marker(Marker::Dot)
+                .graph_type(GraphType::Line)
+                .style(Style::default().cyan())
+                .data(&self.coordinate_vector)
+        ];
 
+        let x_axis = Axis::default()
+            .title("X-Axis".blue())
+            .style(Style::default().white())
+            .bounds([self.x_min, self.x_max])
+            .labels(vec![self.x_min.to_string().into(), self.x_max.to_string().into()]);
+
+        let y_axis = Axis::default()
+            .title("Y-Axis".blue())
+            .style(Style::default().white())
+            .bounds([self.y_min, self.y_max])
+            .labels(vec![self.y_min.to_string().into(), self.y_max.to_string().into()]);
+
+        let chart = Chart::new(dataset)
+            .block(Block::default().title("Graph"))
+            .x_axis(x_axis)
+            .y_axis(y_axis);
+
+        f.render_widget(chart, area)
+    }
 }

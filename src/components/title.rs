@@ -1,9 +1,8 @@
 use ratatui::{
     Frame,
     prelude::*,
-    widgets::{block::*, *},
+    widgets::*,
 };
-
 use crate::app::Focus;
 
 pub struct Title {
@@ -24,6 +23,9 @@ impl Title {
     pub fn update(&mut self, focus: Focus) {
         self.reset();
         match focus {
+            Focus::Home => {
+                self.title_text = String::from("HOME")
+            }
             Focus::Expr => {
                 self.title_text = String::from("EXPRESSION");
             }

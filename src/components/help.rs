@@ -1,9 +1,8 @@
 use ratatui::{
     Frame,
     prelude::*,
-    widgets::{block::*, *},
+    widgets::{*},
 };
-
 use crate::app::Focus;
 
 pub struct Help {
@@ -24,14 +23,17 @@ impl Help {
     pub fn update(&mut self, focus: Focus) {
         self.reset();
         match focus {
+            Focus::Home => {
+                self.help_text = String::from("Press <Tab> to continue or <Q> to quit");
+            }
             Focus::Expr => {
-                self.help_text = String::from("TODO: Help Expression Text");
+                self.help_text = String::from("Enter an expression (ie: sin(x)), Press <Tab> to continue or <Q> to quit");
             }
             Focus::Domain => {
-                self.help_text = String::from("TODO: Help Domain Text");
+                self.help_text = String::from("Enter a domain (ie: -5..5), Press <Tab> to continue or <Q> to quit");
             }
             Focus::Graph => {
-                self.help_text = String::from("TODO: Help Graph Text");
+                self.help_text = String::from("Press <Enter> to render graph, <Tab> to reset application, or <Q> to quit");
             }
         }
     }
